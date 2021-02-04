@@ -1,0 +1,172 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'kotlin-kapt'
+    id 'androidx.navigation.safeargs.kotlin'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
+    id 'com.google.firebase.firebase-perf'
+}
+
+android {
+    compileSdkVersion rootProject.compileSdkVersion
+
+    defaultConfig {
+        applicationId "com.mobiledevpro.apptemplate.new"
+        minSdkVersion rootProject.minSdkVersion
+        targetSdkVersion rootProject.targetSdkVersion
+        vectorDrawables.useSupportLibrary = true
+        multiDexEnabled false
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    dexOptions {
+        maxProcessCount 2
+        javaMaxHeapSize "2g"
+    }
+
+    signingConfigs {
+        //uses for CI
+        config {
+            keyAlias 'here alias value'
+            keyPassword System.getenv("SOME_APP_KEYPWD")
+            storeFile file('here key file name')
+            storePassword System.getenv("SOME_APP_KSTOREPWD")
+        }
+    }
+
+    packagingOptions {
+        exclude 'META-INF/*.kotlin_module'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8.toString()
+    }
+
+    buildTypes {
+        debug {
+            debuggable true
+            firebaseCrashlytics {
+                // False -  don't need crash reporting for debug build.
+                mappingFileUploadEnabled false
+            }
+        }
+        release {
+            debuggable false
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.config
+        }
+    }
+
+    flavorDimensions "default"
+    productFlavors {
+        production {
+            dimension "default"
+            applicationId defaultConfig.applicationId
+            versionCode rootProject.appVersionCode
+            versionName rootProject.appVersionName
+            //custom naming for App Bundle builds
+            archivesBaseName = "${applicationId}-v${versionName}-build${versionCode}"
+
+            //it allows to use the same flavor in android modules/libraries
+            matchingFallbacks = ["production"]
+        }
+
+        dev {
+            dimension "default"
+            applicationId defaultConfig.applicationId + ".dev"
+            versionCode rootProject.appVersionCode
+            versionName rootProject.appVersionName + "-dev"
+            //custom naming for App Bundle builds
+            archivesBaseName = "${applicationId}-v${versionName}-build${versionCode}"
+
+            //it allows to use the same flavor in android modules/libraries
+            matchingFallbacks = ["dev"]
+
+            //use this flavor by default
+            getIsDefault().set(true)
+        }
+    }
+
+    sourceSets {
+        main {
+            res.srcDirs = [
+                    'src/main/res/layouts/activity',
+                    'src/main/res/layouts/fragment',
+                    'src/main/res/layouts/adapter',
+                    'src/main/res/layouts/include',
+                    'src/main/res/layouts/preference',
+                    'src/main/res' //it should be the last item here (it affects on output directory in Assets Studio)
+            ]
+            java.srcDirs = ['src/main/kotlin']
+        }
+    }
+
+    buildFeatures.dataBinding = true
+    buildFeatures.viewBinding = true
+
+    kapt.correctErrorTypes = true
+
+    testOptions {
+        unitTests.includeAndroidResources = true
+    }
+
+    dynamicFeatures = [':feature:chat_main', ':feature:chat_core', ':feature:profile_settings']
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    api deps.appcompat
+    api deps.material
+    api deps.preference
+    api deps.constraintLayout
+
+    api deps.coreKtx
+    api deps.playCore
+
+    //common UI lib
+    productionApi deps.commonUI //<-- use a published library from jitpack.io
+    devApi project(":common-ui") //<-- use local module
+
+    //DI
+    api deps.koinScope
+    api deps.koinViewModel
+
+    //Navigation
+    api deps.navigationFragment
+    api deps.navigationUi
+    implementation deps.navigationDynamic
+
+    //Livedata
+    api deps.lifecycle
+    kapt deps.lifecycleCompiler
+
+    //memory leak detection in debug
+    debugApi deps.leakcanaryDebug
+
+    //Glide
+    api deps.glide
+    kapt deps.glideCompiler
+
+    //Lottie animation
+    api deps.lottie
+
+    api project(":data:local")
+    api project(":domain:core")
+
+    testImplementation deps.jUnit
+    androidTestImplementation deps.jUnitExt
+    androidTestImplementation deps.testRunner
+    androidTestImplementation deps.espressoCore
+    testImplementation deps.mockito
+    testImplementation deps.koinTest
+}
+
